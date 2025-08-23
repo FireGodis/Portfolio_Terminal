@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terminal Cybernétique</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;700&family=Share+Tech+Mono&display=swap');
+        
+        :root {
+            --terminal-bg: #0a0a12;
+            --terminal-green: #0f0;
+            --terminal-cyan: #0ff;
+            --terminal-purple: #b19cd9;
+            --terminal-red: #f44;
+            --terminal-glow: rgba(0, 255, 0, 0.7);
+            --terminal-border: #333;
+            --text-color: #e0e0e0;
+            --text-shadow: 0 0 8px var(--terminal-glow);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #000;
+            overflow: hidden;
+            font-family: 'Inconsolata', monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            perspective: 1000px;
+        }
+        
+        .matrix-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.15;
+        }
+        
+        .terminal-container {
+            position: relative;
+            width: 85%;
+            max-width: 800px;
+            height: 70vh;
+            background: 
+                linear-gradient(135deg, #0a0a12 0%, #0d0d20 100%),
+                url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><path d="M0 0h100v100H0z" fill="none"/><path d="M20 20h10v10H20zM50 20h10v10H50zM80 20h10v10H80zM20 50h10v10H20zM50 50h10v10H50zM80 50h10v10H80zM20 80h10v10H20zM50 80h10v10H50zM80 80h10v10H80z" fill="rgba(0,255,0,0.1)"/></svg>');
+            border-radius: 8px;
+            box-shadow: 
+                0 0 30px rgba(0, 255, 0, 0.5),
+                inset 0 0 20px rgba(0, 255, 0, 0.2),
+                0 10px 50px rgba(0, 0, 0, 0.8);
+            overflow: hidden;
+            border: 1px solid transparent;
+            border-image: 
+                linear-gradient(45deg, #0f0, #0ff, #b19cd9) 1;
+            transform-style: preserve-3d;
+            transform: perspective(1000px) rotate3d(1, 0.5, 0, 15deg);
+            animation: float 8s ease-in-out infinite;
+            transition: all 0.3s ease;
+        }
+        
+        .terminal-container:hover {
+            transform: perspective(1000px) rotate3d(1, 0.3, 0, 10deg);
+            box-shadow: 
+                0 0 40px rgba(0, 255, 0, 0.7),
+                inset 0 0 25px rgba(0, 255, 0, 0.3),
+                0 15px 60px rgba(0, 0, 0, 0.9);
+        }
+        
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0) rotateX(10deg) rotateY(5deg);
+            }
+            50% {
+                transform: translateY(-20px) rotateX(5deg) rotateY(10deg);
+            }
+        }
+        
+        .terminal-header {
+            background: linear-gradient(to right, #0a0a0a, #111);
+            padding: 8px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: var(--terminal-green);
+            font-family: 'Share Tech Mono', monospace;
+            border-bottom: 1px solid var(--terminal-green);
+            box-shadow: 0 2px 15px rgba(0, 255, 0, 0.3);
+        }
+        
+        .terminal-buttons {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .terminal-button {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .terminal-button.red {
+            background: #ff5f56;
+        }
+        
+        .terminal-button.yellow {
+            background: #ffbd2e;
+        }
+        
+        .terminal-button.green {
+            background: #27c93f;
+        }
+        
+        .terminal-body {
+            padding: 15px;
+            height: calc(100% - 40px);
+            overflow-y: auto;
+            color: var(--text-color);
+            text-shadow: var(--text-shadow);
+            line-height: 1.6;
+        }
+        
+        .typing-text {
+            white-space: pre-wrap;
+            font-size: 1.1rem;
+        }
+        
+        .command-line {
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .prompt {
+            color: var(--terminal-green);
+            margin-right: 10px;
+            font-weight: bold;
+        }
+        
+        .cursor {
+            display: inline-block;
+            width: 10px;
+            height: 20px;
+            background: var(--terminal-green);
+            animation: blink 1s infinite;
+            vertical-align: middle;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        
+        .command-input {
+            flex-grow: 1;
+            background: transparent;
+            border: none;
+            color: var(--terminal-green);
+            font-family: 'Inconsolata', monospace;
+            font-size: 1.1rem;
+            outline: none;
+            caret-color: var(--terminal-green);
+            text-shadow: var(--text-shadow);
+        }
+        
+        .glitch {
+            position: relative;
+        }
+        
+        .glitch::before, .glitch::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--terminal-bg);
+        }
+        
+        .glitch::before {
+            left: 2px;
+            text-shadow: -2px 0 var(--terminal-red);
+            clip: rect(24px, 550px, 90px, 0);
+            animation: glitch-anim-1 2s infinite linear alternate-reverse;
+        }
+        
+        .glitch::after {
+            left: -2px;
+            text-shadow: -2px 0 var(--terminal-cyan);
+            clip: rect(85px, 550px, 140px, 0);
+            animation: glitch-anim-2 2s infinite linear alternate-reverse;
+        }
+        
+        @keyframes glitch-anim-1 {
+            0% { clip: rect(54px, 800px, 54px, 0); }
+            20% { clip: rect(27px, 800px, 86px, 0); }
+            40% { clip: rect(14px, 800px, 75px, 0); }
+            60% { clip: rect(39px, 800px, 104px, 0); }
+            80% { clip: rect(18px, 800px, 53px, 0); }
+            100% { clip: rect(73px, 800px, 112px, 0); }
+        }
+        
+        @keyframes glitch-anim-2 {
+            0% { clip: rect(35px, 800px, 89px, 0); }
+            20% { clip: rect(56px, 800px, 103px, 0); }
+            40% { clip: rect(22px, 800px, 64px, 0); }
+            60% { clip: rect(88px, 800px, 120px, 0); }
+            80% { clip: rect(13px, 800px, 32px, 0); }
+            100% { clip: rect(42px, 800px, 99px, 0); }
+        }
+        
+        .ascii-art {
+            color: var(--terminal-purple);
+            line-height: 1.3;
+            margin: 15px 0;
+            white-space: pre;
+            font-size: 0.6rem;
+            letter-spacing: 1px;
+        }
+        
+        .highlight {
+            color: var(--terminal-cyan);
+        }
+        
+        .skill-bar {
+            margin: 8px 0;
+        }
+        
+        .skill-name {
+            display: inline-block;
+            width: 120px;
+            color: var(--terminal-green);
+        }
+        
+        .skill-level {
+            display: inline-block;
+            height: 15px;
+            background: linear-gradient(to right, var(--terminal-green), var(--terminal-cyan));
+            box-shadow: 0 0 5px var(--terminal-glow);
+            animation: expand 1s ease-out;
+            transform-origin: left;
+        }
+        
+        @keyframes expand {
+            from { transform: scaleX(0); }
+            to { transform: scaleX(1); }
+        }
+        
+        .contact-item {
+            margin: 8px 0;
+        }
+        
+        .contact-item a {
+            color: var(--terminal-purple);
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+        
+        .contact-item a:hover {
+            color: var(--terminal-cyan);
+            text-shadow: 0 0 10px var(--terminal-cyan);
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        /* Sélecteur de langue */
+        .language-selector {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 5px;
+            z-index: 100;
+        }
+        
+        .lang-btn {
+            background: rgba(0, 0, 0, 0.7);
+            color: #0f0;
+            border: 1px solid #0f0;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-family: 'Inconsolata', monospace;
+            transition: all 0.3s;
+        }
+        
+        .lang-btn:hover {
+            background: rgba(0, 255, 0, 0.2);
+            box-shadow: 0 0 10px #0f0;
+        }
+        
+        .lang-btn.active {
+            background: #0f0;
+            color: #000;
+            font-weight: bold;
+        }
+        
+        /* Effet pluie Matrix */
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="matrix" class="matrix-background"></canvas>
+    
+    <div class="language-selector">
+        <button class="lang-btn" data-lang="pt">PT</button>
+        <button class="lang-btn" data-lang="en">EN</button>
+        <button class="lang-btn" data-lang="es">ES</button>
+        <button class="lang-btn active" data-lang="fr">FR</button>
+    </div>
+    
+    <div class="terminal-container">
+        <div class="terminal-header">
+            <div class="terminal-buttons">
+                <div class="terminal-button red"></div>
+                <div class="terminal-button yellow"></div>
+                <div class="terminal-button green"></div>
+            </div>
+            <div class="glitch" data-text="utilisateur@terminal:~">utilisateur@terminal:~</div>
+            <div class="terminal-buttons">
+                <div style="width: 20px;"></div>
+            </div>
+        </div>
+        <div class="terminal-body" id="terminal-body">
+            <div id="typing-text" class="typing-text"></div>
+            <div id="command-line" class="command-line hidden">
+                <span class="prompt">></span>
+                <input type="text" class="command-input" id="command-input" autocomplete="off">
+                <span class="cursor"></span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Effet Matrix
+        const canvas = document.getElementById('matrix');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        
+        const katakana = 'アァカサタナハマヤャラワガザダバパイィキシチニヒミリヰギジヂビピウゥクスツヌフムユュルグズブヅプエェケセテネヘメレヱゲゼデベペオォコソトノホモヨョロヲゴゾドボポヴッン';
+        const latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        const nums = '0123456789';
+        const symbols = '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~';
+        const binary = '01';
+        
+        const alphabet = katakana + latin + nums + symbols + binary;
+        
+        const fontSize = 16;
+        const columns = canvas.width / fontSize;
+        
+        const rainDrops = [];
+        
+        for (let x = 0; x < columns; x++) {
+            rainDrops[x] = 1;
+        }
+        
+        function draw() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = '#0f0';
+            ctx.font = fontSize + 'px monospace';
+            
+            for (let i = 0; i < rainDrops.length; i++) {
+                const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+                ctx.fillText(text, i * fontSize, rainDrops[i] * fontSize);
+                
+                if (rainDrops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                    rainDrops[i] = 0;
+                }
+                rainDrops[i]++;
+            }
+            
+            requestAnimationFrame(draw);
+        }
+        
+        // Effet de frappe dans le terminal
+        const terminalText = document.getElementById('typing-text');
+        const commandLine = document.getElementById('command-line');
+        const commandInput = document.getElementById('command-input');
+        
+        const messages = [
+            { text: "Initialisation du système...", delay: 50 },
+            { text: "Chargement des données du profil...", delay: 50 },
+            { text: "██████████████ 100%", delay: 30, style: "color: #0ff" },
+            { text: "\n", delay: 200 },
+            { text: "> Bienvenue dans le TERMINAL CYBERNÉTIQUE // ACCÈS AUTORISÉ", delay: 10, style: "color: #0f0; font-weight: bold" },
+            { text: "\n\n", delay: 100 },
+            { text: ">> PROFIL UTILISATEUR <<", delay: 10, style: "color: #b19cd9; text-decoration: underline" },
+            { text: "\n", delay: 100 },
+            { text: "> NOM: ", delay: 20 },
+            { text: "Luiz Henrique de Oliveira Eufrásio", delay: 100, style: "color: #0ff; font-weight: bold" },
+            { text: "\n", delay: 50 },
+            { text: "> TITRE: ", delay: 20 },
+            { text: "PROFESSEUR DE PROGRAMMATION ET ÉDITEUR VIDÉO", delay: 50, style: "color: #0ff" },
+            { text: "\n", delay: 50 },
+            { text: "> LOCALISATION: ", delay: 20 },
+            { text: "[DONNÉES CRYPTÉES]", delay: 70, style: "color: #f44" },
+            { text: "\n", delay: 50 },
+            { text: "> STATUT: ", delay: 20 },
+            { text: "ACTIF // NIVEAU DE SÉCURITÉ: DELTA", delay: 50, style: "color: #0f0" },
+            { text: "\n\n", delay: 100 },
+            { text: ">> COMPÉTENCES TECHNIQUES <<", delay: 10, style: "color: #b19cd9; text-decoration: underline" },
+            { text: "\n", delay: 100 },
+            { text: "> PYTHON: ", delay: 20 },
+            { text: "███▌ 35%", delay: 30, style: "color: #0ff" },
+            { text: "\n", delay: 50 },
+            { text: "> JAVASCRIPT: ", delay: 20 },
+            { text: "█████▊ 58%", delay: 30, style: "color: #0ff" },
+            { text: "\n", delay: 50 },
+            { text: "> CYBERSÉCURITÉ: ", delay: 20 },
+            { text: "███████▋ 75%", delay: 30, style: "color: #0ff" },
+            { text: "\n", delay: 50 },
+            { text: "> ARCHITECTURE CLOUD: ", delay: 20 },
+            { text: "██▍ 36%", delay: 30, style: "color: #0ff" },
+            { text: "\n", delay: 50 },
+            { text: "> IA/ML: ", delay: 20 },
+            { text: "██████▌ 65%", delay: 30, style: "color: #0ff" },
+            { text: "\n", delay: 50 },
+            { text: "> AFTER EFFECTS: ", delay: 20 },
+            { text: "████████▉ 87%", delay: 30, style: "color: #0ff" },
+            { text: "\n\n", delay: 100 },
+            { text: ">> HISTORIQUE DES PROJETS <<", delay: 10, style: "color: #b19cd9; text-decoration: underline" },
+            { text: "\n", delay: 100 },
+            { text: "> [2025] ORUNBRA - github.com/FireGodis/OrunbraBetaPublic", delay: 30 },
+            { text: "\n", delay: 50 },
+            { text: "> [2025] KODLAND SURVIVALS - github.com/FireGodis/KodlandSurvivals", delay: 30 },
+            { text: "\n", delay: 50 },
+            { text: "> [2024] PORTFOLIO LUIZ/FIRE - github.com/FireGodis/luizfireportfolio", delay: 30 },
+            { text: "\n\n", delay: 100 },
+            { text: ">> POINTS DE CONTACT <<", delay: 10, style: "color: #b19cd9; text-decoration: underline" },
+            { text: "\n", delay: 100 },
+            { text: "> EMAIL: ", delay: 20 },
+            { text: "luizhoe@gmail.com", delay: 30, style: "color: #0ff" },
+            { text: "\n", delay: 50 },
+            { text: "> GITHUB: ", delay: 20 },
+            { text: "github.com/FireGodis", delay: 30, style: "color: #0ff" },
+            { text: "\n", delay: 50 },
+            { text: "> YOUTUBE: ", delay: 20 },
+            { text: "@FireGod13", delay: 30, style: "color: #0ff" },
+            { text: "\n\n", delay: 100 },
+            { text: "> Tapez 'aide' pour voir les commandes disponibles", delay: 30, style: "color: #0f0" },
+            { text: "\n", delay: 50 },
+        ];
+        
+        let currentMessageIndex = 0;
+        let currentCharIndex = 0;
+        let isTyping = true;
+        
+        function typeNextCharacter() {
+            if (currentMessageIndex >= messages.length) {
+                isTyping = false;
+                commandLine.classList.remove('hidden');
+                commandInput.focus();
+                return;
+            }
+            
+            const currentMessage = messages[currentMessageIndex];
+            const textToType = currentMessage.text;
+            
+            if (currentCharIndex < textToType.length) {
+                const char = textToType.charAt(currentCharIndex);
+                const span = document.createElement('span');
+                span.textContent = char;
+                
+                if (currentMessage.style) {
+                    span.style = currentMessage.style;
+                }
+                
+                terminalText.appendChild(span);
+                currentCharIndex++;
+                
+                setTimeout(typeNextCharacter, currentMessage.delay);
+            } else {
+                currentMessageIndex++;
+                currentCharIndex = 0;
+                setTimeout(typeNextCharacter, 100);
+            }
+        }
+        
+        function processCommand(command) {
+            terminalText.appendChild(document.createElement('br'));
+            
+            const prompt = document.createElement('span');
+            prompt.textContent = '> ';
+            prompt.style.color = '#0f0';
+            terminalText.appendChild(prompt);
+            
+            const cmdText = document.createElement('span');
+            cmdText.textContent = command;
+            cmdText.style.color = '#e0e0e0';
+            terminalText.appendChild(cmdText);
+            
+            terminalText.appendChild(document.createElement('br'));
+            
+            const response = document.createElement('div');
+            response.style.marginTop = '10px';
+            
+            command = command.toLowerCase().trim();
+            
+            if (command === 'aide') {
+                response.innerHTML = `Commandes disponibles:<br>
+                - <span class="highlight">apropos</span>: Afficher le profil détaillé<br>
+                - <span class="highlight">competences</span>: Lister les compétences techniques<br>
+                - <span class="highlight">contact</span>: Afficher les informations de contact<br>
+                - <span class="highlight">effacer</span>: Effacer le terminal<br>
+                - <span class="highlight">quitter</span>: Fermer le terminal (juste un test)`;
+            } 
+            else if (command === 'apropos') {
+                response.innerHTML = `// PROFIL UTILISATEUR //<br><br>
+                <span class="highlight">Luiz Henrique de Oliveira Eufrásio</span> Étudiant en Analyse et Développement de Systèmes | Technicien en Informatique | Éditeur Multimédia<br>
+                📍 Novo Gama, GO/DF | 🎓 4ème Semestre ADS - UNICEPLAC<br>
+                🌐 Anglais Avancé | 🖥️ Développeur Backend en formation<br><br>
+                Compétences Techniques<br>
+                ▸ Édition Professionnelle: After Effects, Premiere, Photoshop (Niveau Avancé)<br>
+                ▸ Maintenance Matérielle: Connaissances avancées<br>
+                ▸ Programmation: Java, C, C#, C++, Lua, HTML/CSS (Connaissances intermédiaires)<br>
+                ▸ Informatique: Maîtrise complète des outils d'entreprise<br><br>
+                Formation Académique<br>
+                • Technicien en Informatique - IFPA<br>
+                • Gestion Administrative/Personnelle - IFPA<br>
+                • Lycée - Ceplen (2022)<br>
+                • Analyse et Développement de Systèmes - UNICEPLAC (En cours)<br><br>
+                Objectif Professionnel<br>
+                Je cherche une opportunité en tant que Développeur Backend ou Technicien en TI pour:<br>
+                ✅ Appliquer mes connaissances en programmation et infrastructure<br>
+                ✅ Progresser professionnellement dans un environnement collaboratif<br>
+                ✅ Consolider ma carrière avec un focus sur les solutions technologiques<br><br>
+                Différenciateurs:<br>
+                ✔ Maîtrise des outils créatifs et techniques<br>
+                ✔ Profil résolutif avec état d'esprit de croissance<br>
+                ✔ Disponibilité pour un apprentissage continu`;
+            } 
+            else if (command === 'competences') {
+                response.innerHTML = `>> COMPÉTENCES TECHNIQUES <<<br><br>
+                <div class="skill-bar"><span class="skill-name">Programmation:</span> <span class="skill-level" style="width: 50%"></span></div>
+                <div class="skill-bar"><span class="skill-name">Sécurité:</span> <span class="skill-level" style="width: 60%"></span></div>
+                <div class="skill-bar"><span class="skill-name">Réseaux:</span> <span class="skill-level" style="width: 45%"></span></div>
+                <div class="skill-bar"><span class="skill-name">IA/ML:</span> <span class="skill-level" style="width: 65%"></span></div>
+                <div class="skill-bar"><span class="skill-name">After Effects:</span> <span class="skill-level" style="width: 87%"></span></div>`;
+            } 
+            else if (command === 'contact') {
+                response.innerHTML = `>> CANAUX DE CONTACT <<<br><br>
+                <div class="contact-item">Email: <a href="mailto:luizhoe@gmail.com">luizhoe@gmail.com</a></div>
+                <div class="contact-item">GitHub: <a href="https://github.com/FireGodis" target="_blank">github.com/FireGodis</a></div>
+                <div class="contact-item">YouTube: <a href="https://youtube.com/@FireGod13" target="_blank">@FireGod13</a></div>
+                <div class="contact-item">PGP: <span style="color: #f44">[Disponible sur demande]</span></div>`;
+            }
+            else if (command === 'effacer') {
+                terminalText.innerHTML = '';
+                commandInput.value = '';
+                return;
+            }
+            else if (command === 'quitter') {
+                response.innerHTML = `<span style="color: #f44">Accès Refusé: Impossible de fermer le terminal depuis cette session.</span>`;
+            }
+            else if (command === 'decrypt cv.pdf') {
+                response.innerHTML = `>> DÉMARRAGE DU DÉCRYPTAGE DU CV <<<br><br>
+                <div style="color:#0ff">Traitement du fichier sécurisé...</div>
+                <div style="color:#0f0">Vérification de la signature digitale...</div>
+                <div style="color:#b19cd9">Application de la clé de décryptage...</div><br>
+                <div style="color:#fff">NOM: Luiz Henrique de Oliveira Eufrásio<br>
+                FORMATION: Analyse et Développement de Systèmes (En cours)<br>
+                EXPÉRIENCE: Éditeur Vidéo, Professeur de Programmation<br>
+                COMPÉTENCES: Python, JavaScript, After Effects, Premiere Pro<br>
+                CONTACT: luizhoe@gmail.com</div>`;
+            }
+            else if (command === 'view avatar') {
+                response.innerHTML = `>> CHARGEMENT DE L'HOLOGRAMME 3D <<<br><br>
+                <div style="width:200px;height:300px;margin:0 auto;background:rgba(0,255,255,0.1);border:1px solid #0ff;position:relative;">
+                    <div style="position:absolute;width:100%;height:100%;background:linear-gradient(transparent 70%, rgba(0,255,255,0.3));clip-path:polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%);filter:drop-shadow(0 0 10px #0ff)">
+                        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#fff;text-align:center;">
+                            AVATAR 3D<br>LUIZ HENRIQUE
+                        </div>
+                    </div>
+                </div>`;
+            }
+            else {
+                response.innerHTML = `<span style="color: #f44">Commande non trouvée: ${command}</span><br>
+                Tapez <span class="highlight">'aide'</span> pour voir les commandes disponibles.`;
+            }
+            
+            terminalText.appendChild(response);
+            terminalText.appendChild(document.createElement('br'));
+            commandLine.scrollIntoView();
+        }
+        
+        commandInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                const command = this.value;
+                this.value = '';
+                
+                if (command.trim() !== '') {
+                    processCommand(command);
+                }
+            }
+        });
+        
+        // Sélecteur de langue - liens vers les versions spécifiques
+        const langButtons = document.querySelectorAll('.lang-btn');
+        
+        langButtons.forEach(button => {
+            const lang = button.dataset.lang;
+            button.addEventListener('click', () => {
+                if (lang === 'fr') {
+                    window.location.href = 'indexFR.html';
+                } else {
+                    window.location.href = `index${lang.toUpperCase()}.html`;
+                }
+            });
+        });
+        
+        // Démarrer les animations
+        window.addEventListener('load', function() {
+            draw();
+            typeNextCharacter();
+        });
+        
+        window.addEventListener('resize', function() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+    </script>
+</body>
+</html>
